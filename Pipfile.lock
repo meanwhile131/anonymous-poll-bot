@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "84812bb65b1dad510c121b6686169911d8374e7c6abf6aa3247c3f5ebaefb327"
+            "sha256": "f68794ebb7a822b34997215deb994de6812ac6987f91dc4cce89b4b96bde4b40"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -16,15 +16,6 @@
         ]
     },
     "default": {
-        "aiosqlite": {
-            "hashes": [
-                "sha256:131bb8056daa3bc875608c631c678cda73922a2d4ba8aec373b19f18c17e7aa3",
-                "sha256:2549cf4057f95f53dcba16f2b64e8e2791d7e1adedb13197dd8ed77bb226d7d0"
-            ],
-            "index": "pypi",
-            "markers": "python_version >= '3.9'",
-            "version": "==0.21.0"
-        },
         "anyio": {
             "hashes": [
                 "sha256:73c693b567b0c55130c104d0b43a9baf3aa6a31fc6110116509f27bf75e21ec0",
@@ -81,14 +72,6 @@
             "index": "pypi",
             "markers": "python_version >= '3.9'",
             "version": "==22.5"
-        },
-        "typing-extensions": {
-            "hashes": [
-                "sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466",
-                "sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548"
-            ],
-            "markers": "python_version >= '3.9'",
-            "version": "==4.15.0"
         }
     },
     "develop": {}
