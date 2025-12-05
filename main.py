@@ -80,7 +80,6 @@ async def vote_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await query.answer("Ошибка данных голоса.")
         return
-    print(poll_id)
     cursor = cur.execute("SELECT 1 FROM polls WHERE id = ?;", [poll_id])
     poll_found = len(cursor.fetchall()) > 0
     if not poll_found:
