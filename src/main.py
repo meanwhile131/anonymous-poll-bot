@@ -32,8 +32,8 @@ if not token:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type == ChatType.PRIVATE:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="""Команды:
-/new \\- создать голосование
-/results `номер_опроса` \\- посмотреть результаты опроса""", parse_mode=ParseMode.MARKDOWN_V2)
+/new - создать голосование
+/results <code>номер_опроса</code> - посмотреть результаты опроса""", parse_mode=ParseMode.HTML)
         return
     if len(context.args) == 1:
         try:
@@ -74,7 +74,7 @@ async def message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f"""Создан опрос #{new_id}.
 Вы можете опубликовать его в группе используя ссылку: {poll_url}
 Вы сможете посмотреть результаты командой:
-/results `{new_id}`""", parse_mode=ParseMode.MARKDOWN_V2)
+/results <code>{new_id}</code>""", parse_mode=ParseMode.HTML)
 
 
 async def vote_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -118,7 +118,7 @@ async def vote_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def results(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) != 1:
         await context.bot.send_message(update.effective_chat.id, """Укажите опрос, для которого нужно посмотреть результаты:
-/results `номер_опроса`""", parse_mode=ParseMode.MARKDOWN_V2)
+/results <code>номер_опроса</code>""", parse_mode=ParseMode.HTML)
         return
 
     try:
