@@ -4,7 +4,7 @@ from enum import Enum
 import sqlite3
 from pathlib import Path
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.constants import ParseMode
+from telegram.constants import ParseMode, ChatType
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler, CallbackQueryHandler
 
 
@@ -30,10 +30,10 @@ if not token:
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.type == filters.ChatType.PRIVATE:
+    if update.effective_chat.type == ChatType.PRIVATE:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="""Команды:
-/new - создать голосование
-/results `номер_опроса` - посмотреть результаты опроса""", parse_mode=ParseMode.MARKDOWN_V2)
+/new \\- создать голосование
+/results `номер_опроса` \\- посмотреть результаты опроса""", parse_mode=ParseMode.MARKDOWN_V2)
         return
     if len(context.args) == 1:
         try:
