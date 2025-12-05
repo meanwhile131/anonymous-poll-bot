@@ -2,6 +2,7 @@ import os
 import logging
 from enum import Enum
 import sqlite3
+from pathlib import Path
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler, CallbackQueryHandler
@@ -11,8 +12,8 @@ class UserConversationState(Enum):
     NONE = 0
     SETTING_TITLE = 1
 
-
-db = sqlite3.connect('bot.db')
+Path("data").mkdir(parents=True, exist_ok=True)
+db = sqlite3.connect('data/bot.db')
 cur = db.cursor()
 cur.execute("CREATE TABLE IF NOT EXISTS polls(id INTEGER PRIMARY KEY, owner INTEGER, title TEXT);")
 cur.execute("CREATE TABLE IF NOT EXISTS votes(poll_id INTEGER, caster_id INTEGER, vote INTEGER, caster_name TEXT);")
