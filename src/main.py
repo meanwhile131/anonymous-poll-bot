@@ -12,12 +12,15 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filte
 class UserConversationState(Enum):
     NONE = 0
     SETTING_TITLE = 1
+    SETTING_POLL_ID_FOR_RESULT = 2
+
 
 Path("data").mkdir(parents=True, exist_ok=True)
 db = sqlite3.connect('data/bot.db')
 cur = db.cursor()
 cur.execute("CREATE TABLE IF NOT EXISTS polls(id INTEGER PRIMARY KEY, owner INTEGER, title TEXT);")
-cur.execute("CREATE TABLE IF NOT EXISTS votes(poll_id INTEGER, caster_id INTEGER, vote INTEGER, caster_name TEXT, timestamp INTEGER);")
+cur.execute(
+    "CREATE TABLE IF NOT EXISTS votes(poll_id INTEGER, caster_id INTEGER, vote INTEGER, caster_name TEXT, timestamp INTEGER);")
 db.commit()
 
 logging.basicConfig(
@@ -34,7 +37,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type == ChatType.PRIVATE:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="""Команды:
 /new - создать голосование
-/results <code>номер_опроса</code> - посмотреть результаты опроса""", parse_mode=ParseMode.HTML)
+/results - посмотреть результаты опроса""", parse_mode=ParseMode.HTML)
         return
     if len(context.args) == 1:
         try:
@@ -64,18 +67,47 @@ async def new(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.user_data["state"] != UserConversationState.SETTING_TITLE:
-        return
-    cursor = cur.execute("INSERT INTO polls(owner,title) VALUES(?,?) RETURNING id;",
-                         [update.effective_chat.id, update.message.text])
-    new_id = cursor.fetchone()[0]
-    db.commit()
-    context.user_data["state"] = UserConversationState.NONE
-    poll_url = f"https://t.me/AnonymousPollBot?startgroup={new_id}"
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"""Создан опрос #<code>{new_id}</code>.
+    if context.user_data["state"] == UserConversationState.SETTING_TITLE:
+        cursor = cur.execute("INSERT INTO polls(owner,title) VALUES(?,?) RETURNING id;",
+                             [update.effective_chat.id, update.message.text])
+        new_id = cursor.fetchone()[0]
+        db.commit()
+        context.user_data["state"] = UserConversationState.NONE
+        poll_url = f"https://t.me/AnonymousPollBot?startgroup={new_id}"
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"""Создан опрос #{new_id}.
 Вы можете опубликовать его в группе используя ссылку: {poll_url}
 Вы сможете посмотреть результаты командой:
-/results <code>{new_id}</code>""", parse_mode=ParseMode.HTML)
+/results""")
+    elif context.user_data["state"] == UserConversationState.SETTING_POLL_ID_FOR_RESULT:
+        try:
+            poll_id = int(update.message.text)
+        except ValueError:
+            await context.bot.send_message(update.effective_chat.id, "Номер опроса нужно указать как число.")
+            return
+
+        cursor = cur.execute("SELECT * FROM polls WHERE id = ?;", [poll_id])
+        polls = cursor.fetchall()
+        poll_found = len(polls) > 0
+        if not poll_found:
+            await context.bot.send_message(update.effective_chat.id, f"Опрос #{poll_id} не найден.")
+            return
+        poll = polls[0]
+        if poll[1] != update.effective_user.id:
+            await context.bot.send_message(update.effective_chat.id,
+                                           f"Только создатель опроса может смотреть его результаты.")
+            return
+        msg = f"""Результаты опроса "{poll[2]}" (#{poll_id}):\n"""
+        cursor = cur.execute("SELECT caster_name, vote, timestamp FROM votes WHERE poll_id = ? ORDER BY timestamp ASC;",
+                             [poll_id])
+        votes = cursor.fetchall()
+        for vote in votes:
+            vote_text = "Буду" if vote[1] == 1 else "Не буду"
+            caster = vote[0]
+            timestamp = vote[2]
+            time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timestamp))
+            msg += f"""<code>{time_str}</code> {caster}<code>: {vote_text}</code>\n"""
+        context.user_data["state"] = UserConversationState.NONE
+        await context.bot.send_message(update.effective_chat.id, msg, parse_mode=ParseMode.HTML)
 
 
 async def vote_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -103,52 +135,28 @@ async def vote_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if vote == existing_vote[0]:
             await query.answer("Голос не изменен.")
             return
-        cursor = cur.execute("UPDATE votes SET vote = ?, timestamp = ? WHERE poll_id = ? AND caster_id = ?;", [vote, timestamp, poll_id, caster_id])
+        cursor = cur.execute("UPDATE votes SET vote = ?, timestamp = ? WHERE poll_id = ? AND caster_id = ?;",
+                             [vote, timestamp, poll_id, caster_id])
         db.commit()
         if cursor.rowcount < 1:
             await query.answer("Ошибка сохранения голоса.")
             return
         await query.answer("Голос изменен.")
         return
-    cursor = cur.execute("INSERT INTO votes(poll_id, caster_id, vote, caster_name, timestamp) VALUES(?,?,?,?,?);", [poll_id, caster_id, vote, caster_name, timestamp])
+    cursor = cur.execute("INSERT INTO votes(poll_id, caster_id, vote, caster_name, timestamp) VALUES(?,?,?,?,?);",
+                         [poll_id, caster_id, vote, caster_name, timestamp])
     db.commit()
     if cursor.rowcount < 1:
         await query.answer("Ошибка сохранения голоса.")
         return
     await query.answer("Голос сохранен.")
 
+
 async def results(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) != 1:
-        await context.bot.send_message(update.effective_chat.id, """Укажите опрос, для которого нужно посмотреть результаты:
-/results <code>номер_опроса</code>""", parse_mode=ParseMode.HTML)
-        return
+    await context.bot.send_message(update.effective_chat.id,
+                                   """Укажите номер опроса, для которого нужно посмотреть результаты.""")
+    context.user_data["state"] = UserConversationState.SETTING_POLL_ID_FOR_RESULT
 
-    try:
-        poll_id = int(context.args[0])
-    except ValueError:
-        await context.bot.send_message(update.effective_chat.id, "Номер опроса нужно указать как число.")
-        return
-
-    cursor = cur.execute("SELECT * FROM polls WHERE id = ?;", [poll_id])
-    polls = cursor.fetchall()
-    poll_found = len(polls) > 0
-    if not poll_found:
-        await context.bot.send_message(update.effective_chat.id, f"Опрос #<code>{poll_id}</code> не найден.", parse_mode=ParseMode.HTML)
-        return
-    poll = polls[0]
-    if poll[1] != update.effective_user.id:
-        await context.bot.send_message(update.effective_chat.id, f"Только создатель опроса может смотреть его результаты.")
-        return
-    msg = f"""Результаты опроса "{poll[2]}" (#<code>{poll_id}</code>):\n"""
-    cursor = cur.execute("SELECT caster_name, vote, timestamp FROM votes WHERE poll_id = ? ORDER BY timestamp ASC;", [poll_id])
-    votes = cursor.fetchall()
-    for vote in votes:
-        vote_text = "Буду" if vote[1] == 1 else "Не буду"
-        caster = vote[0]
-        timestamp = vote[2]
-        time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timestamp))
-        msg += f"""<code>{time_str}</code> {caster}<code>: {vote_text}</code>\n"""
-    await context.bot.send_message(update.effective_chat.id, msg, parse_mode=ParseMode.HTML)
 
 if __name__ == '__main__':
     application = ApplicationBuilder().token(token).build()
