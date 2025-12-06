@@ -104,7 +104,7 @@ async def message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             vote_text = "Буду" if vote[1] == 1 else "Не буду"
             caster = vote[0]
             timestamp = vote[2]
-            time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timestamp))
+            time_str = time.strftime("%m-%d %H:%M", time.localtime(timestamp))
             msg += f"""<code>{time_str}</code> {caster}<code>: {vote_text}</code>\n"""
         context.user_data["state"] = UserConversationState.NONE
         await context.bot.send_message(update.effective_chat.id, msg, parse_mode=ParseMode.HTML)
