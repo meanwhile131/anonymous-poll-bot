@@ -71,7 +71,7 @@ async def message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.commit()
     context.user_data["state"] = UserConversationState.NONE
     poll_url = f"https://t.me/AnonymousPollBot?startgroup={new_id}"
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"""Создан опрос #{new_id}.
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"""Создан опрос #<code>{new_id}</code>.
 Вы можете опубликовать его в группе используя ссылку: {poll_url}
 Вы сможете посмотреть результаты командой:
 /results <code>{new_id}</code>""", parse_mode=ParseMode.HTML)
@@ -131,20 +131,20 @@ async def results(update: Update, context: ContextTypes.DEFAULT_TYPE):
     polls = cursor.fetchall()
     poll_found = len(polls) > 0
     if not poll_found:
-        await context.bot.send_message(update.effective_chat.id, f"Опрос #{poll_id} не найден.")
+        await context.bot.send_message(update.effective_chat.id, f"Опрос #<code>{poll_id}</code> не найден.", parse_mode=ParseMode.HTML)
         return
     poll = polls[0]
     if poll[1] != update.effective_user.id:
         await context.bot.send_message(update.effective_chat.id, f"Только создатель опроса может смотреть его результаты.")
         return
-    msg = f"""Результаты опроса "{poll[2]}" (#{poll_id}):\n"""
+    msg = f"""Результаты опроса "{poll[2]}" (#<code>{poll_id}</code>):\n"""
     cursor = cur.execute("SELECT caster_name, vote FROM votes WHERE poll_id = ?;", [poll_id])
     votes = cursor.fetchall()
     for vote in votes:
         vote_text = "Буду" if vote[1] == 1 else "Не буду"
         caster = vote[0]
         msg += f"""{caster}: {vote_text}\n"""
-    await context.bot.send_message(update.effective_chat.id, msg)
+    await context.bot.send_message(update.effective_chat.id, msg, parse_mode=ParseMode.HTML)
 
 if __name__ == '__main__':
     application = ApplicationBuilder().token(token).build()
