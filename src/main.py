@@ -20,7 +20,8 @@ db = sqlite3.connect('data/bot.db')
 cur = db.cursor()
 cur.execute("CREATE TABLE IF NOT EXISTS polls(id INTEGER PRIMARY KEY, owner INTEGER, title TEXT);")
 cur.execute(
-    "CREATE TABLE IF NOT EXISTS votes(poll_id INTEGER, caster_id INTEGER, vote INTEGER, caster_name TEXT, timestamp INTEGER);")
+    "CREATE TABLE IF NOT EXISTS votes(poll_id INTEGER, caster_id INTEGER, vote INTEGER, caster_name TEXT, timestamp INTEGER);"
+)
 cur.execute("CREATE TABLE IF NOT EXISTS admins(id INTEGER PRIMARY KEY);")
 db.commit()
 
@@ -36,9 +37,9 @@ if not token:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type == ChatType.PRIVATE:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="""Команды:
+        await context.bot.send_message(update.effective_chat.id, """Команды:
 /new - создать голосование
-/results - посмотреть результаты опроса""", parse_mode=ParseMode.HTML)
+/results - посмотреть результаты опроса""", ParseMode.HTML)
         return
     if len(context.args) == 1:
         try:
@@ -58,7 +59,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("Буду", callback_data=f"{poll_id} 1"),
              InlineKeyboardButton("Не буду", callback_data=f"{poll_id} 0"), ]
         ])
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"{title} (#{poll_id})",
+        await context.bot.send_message(update.effective_chat.id, f"{title} (#{poll_id})",
                                        reply_markup=reply_markup)
 
 
@@ -67,10 +68,11 @@ async def new(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cursor = cur.execute("SELECT 1 FROM admins WHERE id = ?;", [user_id])
     found = len(cursor.fetchall()) > 0
     if not found:
-        await context.bot.send_message(update.effective_chat.id, "Только администраторы бота могут создавать голосования.")
+        await context.bot.send_message(update.effective_chat.id,
+                                       "Только администраторы бота могут создавать голосования.")
         return
     context.user_data["state"] = UserConversationState.SETTING_TITLE
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="Напишите заголовок опроса.")
+    await context.bot.send_message(update.effective_chat.id, "Напишите заголовок опроса.")
 
 
 async def message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -82,7 +84,7 @@ async def message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.commit()
         context.user_data["state"] = UserConversationState.NONE
         poll_url = f"https://t.me/AnonymousPollBot?startgroup={new_id}"
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"""Создан опрос #{new_id}.
+        await context.bot.send_message(update.effective_chat.id, f"""Создан опрос #{new_id}.
 Вы можете опубликовать его в группе используя ссылку: {poll_url}
 Вы сможете посмотреть результаты командой:
 /results""")
@@ -124,7 +126,7 @@ async def message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg += f"{caster}\n"
         msg += "</pre>"
         context.user_data["state"] = UserConversationState.NONE
-        await context.bot.send_message(update.effective_chat.id, msg, parse_mode=ParseMode.HTML)
+        await context.bot.send_message(update.effective_chat.id, msg, ParseMode.HTML)
 
 
 async def vote_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
