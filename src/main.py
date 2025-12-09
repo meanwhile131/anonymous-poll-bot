@@ -66,8 +66,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def new(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     cursor = cur.execute("SELECT 1 FROM admins WHERE id = ?;", [user_id])
-    found = len(cursor.fetchall()) > 0
-    if not found:
+    is_admin = len(cursor.fetchall()) > 0
+    if not is_admin:
         await context.bot.send_message(update.effective_chat.id,
                                        "Только администраторы бота могут создавать голосования.")
         return
