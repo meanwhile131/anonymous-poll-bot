@@ -83,7 +83,7 @@ async def message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         new_id = cursor.fetchone()[0]
         db.commit()
         context.user_data["state"] = UserConversationState.NONE
-        poll_url = f"https://t.me/AnonymousPollBot?startgroup={new_id}"
+        poll_url = f"https://t.me/{context.bot.username}?startgroup={new_id}"
         await context.bot.send_message(update.effective_chat.id, f"""Создан опрос #{new_id}.
 Вы можете опубликовать его в группе используя ссылку: {poll_url}
 Вы сможете посмотреть результаты командой:
