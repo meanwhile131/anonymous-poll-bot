@@ -18,9 +18,10 @@ class UserConversationState(Enum):
 Path("data").mkdir(parents=True, exist_ok=True)
 db = sqlite3.connect('data/bot.db')
 cur = db.cursor()
+cur.execute("PRAGMA foreign_keys = ON;")
 cur.execute("CREATE TABLE IF NOT EXISTS polls(id INTEGER PRIMARY KEY, owner INTEGER, title TEXT);")
 cur.execute(
-    "CREATE TABLE IF NOT EXISTS votes(poll_id INTEGER, caster_id INTEGER, vote INTEGER, caster_name TEXT, timestamp INTEGER);"
+    "CREATE TABLE IF NOT EXISTS votes(poll_id INTEGER, caster_id INTEGER, vote INTEGER, caster_name TEXT, timestamp INTEGER, FOREIGN KEY(poll_id) REFERENCES polls(id));"
 )
 cur.execute("CREATE TABLE IF NOT EXISTS admins(id INTEGER PRIMARY KEY);")
 db.commit()
