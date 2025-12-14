@@ -15,25 +15,8 @@ class UserConversationState(Enum):
     SETTING_POLL_ID_FOR_RESULT = 2
 
 
-Path("data").mkdir(parents=True, exist_ok=True)
-db = sqlite3.connect('data/bot.db')
-cur = db.cursor()
-cur.execute("PRAGMA foreign_keys = ON;")
-cur.execute("CREATE TABLE IF NOT EXISTS polls(id INTEGER PRIMARY KEY, owner INTEGER, title TEXT);")
-cur.execute(
-    "CREATE TABLE IF NOT EXISTS votes(poll_id INTEGER, caster_id INTEGER, vote INTEGER, caster_name TEXT, timestamp INTEGER, FOREIGN KEY(poll_id) REFERENCES polls(id));"
-)
-cur.execute("CREATE TABLE IF NOT EXISTS admins(id INTEGER PRIMARY KEY);")
-db.commit()
-
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-token = os.getenv("BOT_TOKEN")
-if not token:
-    logging.critical("BOT_TOKEN environment variable not found")
-    exit(1)
+db = None
+cur = None
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -178,7 +161,27 @@ async def results(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["state"] = UserConversationState.SETTING_POLL_ID_FOR_RESULT
 
 
-if __name__ == '__main__':
+def main():
+    global db, cur
+    Path("data").mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect('data/bot.db')
+    cur = db.cursor()
+    cur.execute("PRAGMA foreign_keys = ON;")
+    cur.execute("CREATE TABLE IF NOT EXISTS polls(id INTEGER PRIMARY KEY, owner INTEGER, title TEXT);")
+    cur.execute(
+        "CREATE TABLE IF NOT EXISTS votes(poll_id INTEGER, caster_id INTEGER, vote INTEGER, caster_name TEXT, timestamp INTEGER, FOREIGN KEY(poll_id) REFERENCES polls(id));"
+    )
+    cur.execute("CREATE TABLE IF NOT EXISTS admins(id INTEGER PRIMARY KEY);")
+    db.commit()
+
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO
+    )
+    token = os.getenv("BOT_TOKEN")
+    if not token:
+        raise ValueError("BOT_TOKEN environment variable not found")
+
     application = ApplicationBuilder().token(token).build()
 
     start_handler = CommandHandler('start', start)
@@ -193,3 +196,7 @@ if __name__ == '__main__':
     application.add_handler(results_handler)
 
     application.run_polling(timeout=60)
+
+
+if __name__ == '__main__':
+    main()
