@@ -1,4 +1,5 @@
-[![Docker container](https://github.com/meanwhile131/anonymous-poll-bot/actions/workflows/docker-image.yml/badge.svg)](https://github.com/meanwhile131/anonymous-poll-bot/actions/workflows/docker-image.yml)
+[![Tests](https://github.com/meanwhile131/anonymous-poll-bot/actions/workflows/test.yml/badge.svg)](https://github.com/meanwhile131/anonymous-poll-bot/actions/workflows/test.yml)
+[![Docker container](https://github.com/meanwhile131/anonymous-poll-bot/actions/workflows/docker.yml/badge.svg)](https://github.com/meanwhile131/anonymous-poll-bot/actions/workflows/docker.yml)
 [![CodeQL](https://github.com/meanwhile131/anonymous-poll-bot/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/meanwhile131/anonymous-poll-bot/actions/workflows/github-code-scanning/codeql)
 
 [@AnonymousPollBot](https://t.me/AnonymousPollBot)
