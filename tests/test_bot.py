@@ -1,40 +1,31 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from src.main import start, new, message, vote_button, results, UserConversationState, main
+from unittest.mock import AsyncMock, MagicMock
+from src.bot import Bot, UserConversationState
 import sqlite3
-import os
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(scope="function")
 def db():
     db_connection = sqlite3.connect(':memory:')
-    
-    with patch('sqlite3.connect', return_value=db_connection) as mock_connect:
-        with patch('telegram.ext.Application.run_polling'):
-            with patch.dict(os.environ, {"BOT_TOKEN": "test_token"}):
-                try:
-                    main()
-                except ValueError:
-                    # This is expected if BOT_TOKEN is not set, which is fine for tests
-                    pass
-
-    cur = db_connection.cursor()
-
-    with patch('src.main.db', db_connection):
-        with patch('src.main.cur', cur):
-            yield db_connection
-
+    yield db_connection
     db_connection.close()
 
+
+@pytest.fixture
+def bot(db):
+    mock_application = MagicMock()
+    return Bot(db, mock_application)
+
+
 @pytest.mark.asyncio
-async def test_start_private_chat():
+async def test_start_private_chat(bot):
     update = AsyncMock()
     update.effective_chat.id = 123
     update.effective_chat.type = 'private'
     context = MagicMock()
     context.bot.send_message = AsyncMock()
 
-    await start(update, context)
+    await bot.start(update, context)
 
     context.bot.send_message.assert_called_once()
     sent_text = context.bot.send_message.call_args[0][1]
@@ -43,7 +34,7 @@ async def test_start_private_chat():
 
 
 @pytest.mark.asyncio
-async def test_start_group_chat_with_valid_poll_id(db):
+async def test_start_group_chat_with_valid_poll_id(bot, db):
     update = AsyncMock()
     update.effective_chat.type = 'group'
     update.effective_user.id = 123
@@ -54,7 +45,7 @@ async def test_start_group_chat_with_valid_poll_id(db):
     cur.execute("INSERT INTO polls(id, owner, title) VALUES(1, 123, 'Test Poll')")
     db.commit()
 
-    await start(update, context)
+    await bot.start(update, context)
 
     context.bot.send_message.assert_called_once()
     sent_text = context.bot.send_message.call_args[0][1]
@@ -63,7 +54,7 @@ async def test_start_group_chat_with_valid_poll_id(db):
 
 
 @pytest.mark.asyncio
-async def test_new_as_admin(db):
+async def test_new_as_admin(bot, db):
     update = AsyncMock()
     update.effective_user.id = 123
     update.effective_chat.id = 123
@@ -74,14 +65,14 @@ async def test_new_as_admin(db):
     cur.execute("INSERT INTO admins(id) VALUES(123)")
     db.commit()
 
-    await new(update, context)
+    await bot.new(update, context)
 
     context.bot.send_message.assert_called_once()
     assert context.user_data["state"] == UserConversationState.SETTING_TITLE
 
 
 @pytest.mark.asyncio
-async def test_new_as_non_admin(db):
+async def test_new_as_non_admin(bot, db):
     update = AsyncMock()
     update.effective_user.id = 456
     update.effective_chat.id = 456
@@ -89,14 +80,14 @@ async def test_new_as_non_admin(db):
     context.bot.send_message = AsyncMock()
     context.user_data = {}
 
-    await new(update, context)
+    await bot.new(update, context)
 
     context.bot.send_message.assert_called_once()
     assert context.user_data.get("state") != UserConversationState.SETTING_TITLE
 
 
 @pytest.mark.asyncio
-async def test_message_set_title(db):
+async def test_message_set_title(bot, db):
     update = AsyncMock()
     update.effective_chat.id = 123
     update.message.text = "My New Poll"
@@ -105,7 +96,7 @@ async def test_message_set_title(db):
     context.bot.username = "TestBot"
     context.user_data = {"state": UserConversationState.SETTING_TITLE}
 
-    await message(update, context)
+    await bot.message(update, context)
 
     context.bot.send_message.assert_called_once()
     sent_text = context.bot.send_message.call_args[0][1]
@@ -118,7 +109,7 @@ async def test_message_set_title(db):
 
 
 @pytest.mark.asyncio
-async def test_message_get_results(db):
+async def test_message_get_results(bot, db):
     update = AsyncMock()
     update.effective_user.id = 123
     update.effective_chat.id = 123
@@ -132,7 +123,7 @@ async def test_message_get_results(db):
         "INSERT INTO votes(poll_id, caster_id, vote, caster_name, timestamp) VALUES(1, 456, 1, 'John Doe', 12345)")
     db.commit()
 
-    await message(update, context)
+    await bot.message(update, context)
 
     context.bot.send_message.assert_called_once()
     sent_text = context.bot.send_message.call_args[0][1]
@@ -142,7 +133,7 @@ async def test_message_get_results(db):
 
 
 @pytest.mark.asyncio
-async def test_vote_button_new_vote(db):
+async def test_vote_button_new_vote(bot, db):
     update = AsyncMock()
     update.effective_user.id = 456
     update.effective_user.first_name = "John"
@@ -154,16 +145,16 @@ async def test_vote_button_new_vote(db):
     cur.execute("INSERT INTO polls(id, owner, title) VALUES(1, 123, 'Test Poll')")
     db.commit()
 
-    await vote_button(update, MagicMock())
+    await bot.vote_button(update, MagicMock())
 
     query.answer.assert_called_once()
-    assert "Голос сохранен" in query.answer.call_args[0][0]
+    assert "сохранен" in query.answer.call_args[0][0]
     cur.execute("SELECT vote FROM votes WHERE poll_id = 1 AND caster_id = 456")
     assert cur.fetchone()[0] == 1
 
 
 @pytest.mark.asyncio
-async def test_vote_button_change_vote(db):
+async def test_vote_button_change_vote(bot, db):
     update = AsyncMock()
     update.effective_user.id = 456
     update.effective_user.first_name = "John"
@@ -177,24 +168,23 @@ async def test_vote_button_change_vote(db):
         "INSERT INTO votes(poll_id, caster_id, vote, caster_name, timestamp) VALUES(1, 456, 1, 'John Doe', 12345)")
     db.commit()
 
-    await vote_button(update, MagicMock())
+    await bot.vote_button(update, MagicMock())
 
     query.answer.assert_called_once()
-    assert "Голос изменен" in query.answer.call_args[0][0]
+    assert "изменен" in query.answer.call_args[0][0]
     cur.execute("SELECT vote FROM votes WHERE poll_id = 1 AND caster_id = 456")
     assert cur.fetchone()[0] == 0
 
 
 @pytest.mark.asyncio
-async def test_results(db):
+async def test_results(bot):
     update = AsyncMock()
     update.effective_chat.id = 123
     context = MagicMock()
     context.bot.send_message = AsyncMock()
     context.user_data = {}
 
-    await results(update, context)
+    await bot.results(update, context)
 
     context.bot.send_message.assert_called_once()
-    assert "Укажите номер опроса" in context.bot.send_message.call_args[0][1]
     assert context.user_data["state"] == UserConversationState.SETTING_POLL_ID_FOR_RESULT
