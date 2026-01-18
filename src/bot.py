@@ -67,7 +67,7 @@ class Bot:
         try:
             poll_id = int(context.args[0])
         except ValueError:
-            await update.message.reply_text("Не правильно указан номер опроса.")
+            await update.message.reply_text("Неправильно указан номер опроса.")
             return
         cursor = self.cursor.execute("SELECT owner,title FROM polls WHERE id = ?", [poll_id])
         poll = cursor.fetchone()
