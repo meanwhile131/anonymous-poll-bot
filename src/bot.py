@@ -1,7 +1,9 @@
+import logging
 import sqlite3
 import time
 from enum import Enum
 
+import telegram.error
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, User
 from telegram.constants import ParseMode, ChatType
 from telegram.ext import ContextTypes, CommandHandler, filters, MessageHandler, CallbackQueryHandler
@@ -80,6 +82,10 @@ class Bot:
         reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("Буду", callback_data=f"{poll_id} 1"),
                                                 InlineKeyboardButton("Нет", callback_data=f"{poll_id} 0"), ]])
         await context.bot.send_message(update.effective_chat.id, f"{title} (#{poll_id})", reply_markup=reply_markup)
+        try:
+            await update.message.delete()
+        except telegram.error.BadRequest:
+            logging.info(f"Failed to delete message #{update.message.id} from chat #{update.effective_chat.id}")
 
     async def new(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id

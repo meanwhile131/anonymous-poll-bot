@@ -50,6 +50,7 @@ async def test_start_group_chat_with_valid_poll_id(bot, db):
     await bot.start(update, context)
 
     context.bot.send_message.assert_called_once()
+    update.message.delete.assert_called_once()
     sent_text = context.bot.send_message.call_args[0][1]
     assert "Test Poll" in sent_text
     assert "#1" in sent_text
